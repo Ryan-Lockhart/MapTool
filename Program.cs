@@ -10,7 +10,7 @@ namespace MapTool
     {
 #pragma warning disable CS8618
 
-        private static readonly Vector2u windowSize = new Vector2u(640, 480);
+        private static readonly Vector2u windowSize = new Vector2u(1280, 720);
         private static readonly Vector2u windowMidpoint = new Vector2u(windowSize.X / 2, windowSize.Y / 2);
 
         private static readonly Vector2u mapSize = new Vector2u(5632, 2048);
@@ -33,7 +33,24 @@ namespace MapTool
 
         private static float cameraSpeed = 1000.0f;
 
-        private static ZoomLevel zoomLevel = ZoomLevel.One;
+        private static int zoomMin = -2;
+        private static int zoomLevel = 0;
+        private static int zoomMax = 2;
+
+        private static float GetZoomSpeed()
+        {
+            return zoomLevel switch
+            {
+                -2 => 0.25f,
+                -1 => 0.50f,
+                0 => 1.00f,
+                1 => 2.00f,
+                2 => 4.00f,
+                _ => 1.0f,
+            };
+        }
+
+        private static Vector2f lastCursorPosition;
 
         private static Vector2f CameraPosition
         {
@@ -47,24 +64,6 @@ namespace MapTool
         }
 
 #pragma warning restore
-
-        enum ZoomLevel
-        {
-            Quarter,
-            Half,
-            One,
-            Two,
-            Four
-        }
-
-        private static readonly Dictionary<ZoomLevel, float> zoomLevels = new Dictionary<ZoomLevel, float>
-        {
-            { ZoomLevel.Quarter, 0.25f },
-            { ZoomLevel.Half, 0.50f },
-            { ZoomLevel.One, 1.00f },
-            { ZoomLevel.Two, 2.00f },
-            { ZoomLevel.Four, 4.00f },
-        };
 
         private static void Main(string[] args)
         {
@@ -87,7 +86,7 @@ namespace MapTool
 
         private static void Load()
         {
-            window = window = new RenderWindow(new VideoMode(640, 480), "Map Tool", Styles.None);
+            window = window = new RenderWindow(new VideoMode(windowSize.X, windowSize.Y), "Map Tool", Styles.None);
 
             window.SetVerticalSyncEnabled(true);
             window.SetFramerateLimit(60);
@@ -103,19 +102,13 @@ namespace MapTool
 
             camera = new View(new FloatRect(cameraOrigin, (Vector2f)windowSize));
 
-            camera.Zoom(zoomLevels[zoomLevel]);
-
             window.SetView(camera);
         }
 
         private static void Window_MouseWheelScrolled(object? sender, MouseWheelScrollEventArgs e)
         {
-            if (e.Delta > 0.9f && zoomLevel < ZoomLevel.Four) zoomLevel++;
-            else if (e.Delta < -0.9f && zoomLevel > ZoomLevel.Quarter) zoomLevel--;
-
-            if (zoomLevel > 0) zoomLevel = 0;
-
-            camera.Zoom(zoomLevels[zoomLevel]);
+            if (e.Delta > 0.9f && zoomLevel < zoomMax) camera.Zoom(0.9f);
+            else if (e.Delta < -0.9f && zoomLevel > zoomMin) camera.Zoom(1.1f);
         }
 
         private static void Input(float deltaTime)
@@ -129,12 +122,18 @@ namespace MapTool
             if (Keyboard.IsKeyPressed(Keyboard.Key.Right) || Keyboard.IsKeyPressed(Keyboard.Key.D)) cameraInput.X++;
             if (Keyboard.IsKeyPressed(Keyboard.Key.Left) || Keyboard.IsKeyPressed(Keyboard.Key.A)) cameraInput.X--;
 
-            if (cameraInput != new Vector2f(0.0f, 0.0f)) camera.Move(cameraInput * cameraSpeed * (1.0f / zoomLevels[zoomLevel]) * deltaTime);
+            if (cameraInput != new Vector2f(0.0f, 0.0f)) camera.Move(cameraInput * cameraSpeed * deltaTime * GetZoomSpeed());
 
-            Vector2f mousePosition = window.MapPixelToCoords(Mouse.GetPosition(window), camera);
+            Vector2f cursorPosition = window.MapPixelToCoords(Mouse.GetPosition(window));
+            Vector2i mousePosition = (Vector2i)window.MapPixelToCoords(Mouse.GetPosition(window), camera);
 
-            cursor.Position = mousePosition;
-            cursor.Color = provinces.SamplePosition((Vector2i)mousePosition);
+            if (Mouse.IsButtonPressed(Mouse.Button.Middle) && lastCursorPosition != cursor.Position)
+                camera.Move(-(cursorPosition - lastCursorPosition) * GetZoomSpeed());
+
+            lastCursorPosition = cursor.Position;
+
+            cursor.Position = cursorPosition;
+            cursor.Color = provinces.SamplePosition(mousePosition);
         }
 
         private static void Update(float deltaTime)
@@ -149,6 +148,8 @@ namespace MapTool
             window.SetView(camera);
 
             window.Draw(provinces);
+
+            window.SetView(window.DefaultView);
 
             window.Draw(cursor);
 
