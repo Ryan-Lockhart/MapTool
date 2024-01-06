@@ -1,5 +1,7 @@
-﻿using SFML.Graphics;
-using SFML.System;
+﻿using SFML.System;
+using SFML.Window;
+using SFML.Graphics;
+using SFML.Audio;
 
 namespace MapTool
 {
@@ -22,7 +24,7 @@ namespace MapTool
     public class Map : Drawable
     {
         private readonly MapType type;
-
+        
         private readonly Texture texture;
         private readonly Image image;
 
@@ -44,10 +46,37 @@ namespace MapTool
         public void Translate(int x, int y) => sprite.Position += new Vector2f(x, y);
         public void Translate(in Vector2i offset) => sprite.Position += (Vector2f)offset;
 
-        public Color SamplePosition(uint x, uint y) => image.GetPixel(uint.Clamp(x, 0, texture.Size.X), uint.Clamp(y, 0, texture.Size.Y));
-        public Color SamplePosition(int x, int y) => image.GetPixel(x < 0 ? 0u : uint.Clamp((uint)x, 0, texture.Size.X), y < 0 ? 0u : uint.Clamp((uint)y, 0, texture.Size.Y));
-        public Color SamplePosition(in Vector2u position) => image.GetPixel(uint.Clamp(position.X, 0, texture.Size.X), uint.Clamp(position.Y, 0, texture.Size.Y));
-        public Color SamplePosition(in Vector2i position) => image.GetPixel(position.X < 0 ? 0u : uint.Clamp((uint)position.X, 0, texture.Size.X), position.Y < 0 ? 0u : uint.Clamp((uint)position.Y, 0, texture.Size.Y));
+        public Color SamplePosition(uint x, uint y)
+        {
+            uint clampedX = uint.Clamp(x, 0, texture.Size.X - 1);
+            uint clampedY = uint.Clamp(y, 0, texture.Size.Y - 1);
+
+            return image.GetPixel(clampedX, clampedY);
+        }
+
+        public Color SamplePosition(int x, int y)
+        {
+            uint clampedX = x < 0 ? 0u : uint.Clamp((uint)x, 0, texture.Size.X - 1);
+            uint clampedY = x < 0 ? 0u : uint.Clamp((uint)y, 0, texture.Size.Y - 1);
+
+            return image.GetPixel(clampedX, clampedY);
+        }
+
+        public Color SamplePosition(in Vector2u position)
+        {
+            uint clampedX = uint.Clamp(position.X, 0, texture.Size.X - 1);
+            uint clampedY = uint.Clamp(position.Y, 0, texture.Size.Y - 1);
+
+            return image.GetPixel(clampedX, clampedY);
+        }
+
+        public Color SamplePosition(in Vector2i position)
+        {
+            uint clampedX = position.X < 0 ? 0u : uint.Clamp((uint)position.X, 0, texture.Size.X - 1);
+            uint clampedY = position.Y < 0 ? 0u : uint.Clamp((uint)position.Y, 0, texture.Size.Y - 1);
+
+            return image.GetPixel(clampedX, clampedY);
+        }
 
         public void SampleRegion(uint originX, uint originY, uint width, uint height, out Color[,] sampleRegion)
         {
