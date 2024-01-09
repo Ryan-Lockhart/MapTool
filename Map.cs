@@ -2,78 +2,62 @@
 using SFML.Window;
 using SFML.Graphics;
 using SFML.Audio;
+using System.Collections;
 
 namespace MapTool
 {
-    public enum MapType
-    {
-        Areas,
-        Climates,
-        Continents,
-        Cultures,
-        CultureGroups,
-        Provinces,
-        Regions,
-        Religions,
-        Rivers,
-        Superregions,
-        Terrain,
-        TradeGoods
-    }
-
     public class Map : Drawable
     {
-        private readonly MapType type;
-        
         private readonly Texture texture;
         private readonly Image image;
+
+        private readonly MapType type;
 
         private Sprite sprite;
 
         public Map(string path, MapType type)
         {
-            this.type = type;
             texture = new Texture(path);
             image = texture.CopyToImage();
+
+            this.type = type;
 
             sprite = new Sprite(texture);
         }
 
         public MapType MapType => type;
 
-        public void Draw(RenderTarget target, RenderStates states) => target.Draw(sprite, states);
-
-        public void Translate(int x, int y) => sprite.Position += new Vector2f(x, y);
-        public void Translate(in Vector2i offset) => sprite.Position += (Vector2f)offset;
+        public Vector2u Size => image.Size;
+        public byte[] Pixels => image.Pixels;
 
         public Color SamplePosition(uint x, uint y)
         {
-            uint clampedX = uint.Clamp(x, 0, texture.Size.X - 1);
-            uint clampedY = uint.Clamp(y, 0, texture.Size.Y - 1);
+            uint clampedX = uint.Clamp(x, 0, image.Size.X - 1);
+            uint clampedY = uint.Clamp(y, 0, image.Size.Y - 1);
 
             return image.GetPixel(clampedX, clampedY);
         }
 
         public Color SamplePosition(int x, int y)
         {
-            uint clampedX = x < 0 ? 0u : uint.Clamp((uint)x, 0, texture.Size.X - 1);
-            uint clampedY = x < 0 ? 0u : uint.Clamp((uint)y, 0, texture.Size.Y - 1);
+            uint clampedX = x < 0 ? 0u : uint.Clamp((uint)x, 0, image.Size.X - 1);
+            uint clampedY = x < 0 ? 0u : uint.Clamp((uint)y, 0, image.Size.Y - 1);
 
             return image.GetPixel(clampedX, clampedY);
         }
 
         public Color SamplePosition(in Vector2u position)
         {
-            uint clampedX = uint.Clamp(position.X, 0, texture.Size.X - 1);
-            uint clampedY = uint.Clamp(position.Y, 0, texture.Size.Y - 1);
+            uint clampedX = uint.Clamp(position.X, 0, image.Size.X - 1);
+            uint clampedY = uint.Clamp(position.Y, 0, image.Size.Y - 1);
 
             return image.GetPixel(clampedX, clampedY);
         }
 
         public Color SamplePosition(in Vector2i position)
         {
-            uint clampedX = position.X < 0 ? 0u : uint.Clamp((uint)position.X, 0, texture.Size.X - 1);
-            uint clampedY = position.Y < 0 ? 0u : uint.Clamp((uint)position.Y, 0, texture.Size.Y - 1);
+            uint clampedX = position.X < 0 ? 0u : uint.Clamp((uint)position.X, 0, image.Size.X - 1);
+            uint clampedY = position.Y < 0 ? 0u : uint.Clamp((uint)position.Y, 0, image.Size.Y - 1);
 
             return image.GetPixel(clampedX, clampedY);
         }
@@ -130,5 +114,7 @@ namespace MapTool
                 for (uint x = destination.X; x < destination.X; x++)
                     sampleRegion[x, y] = image.GetPixel(x, y);
         }
+
+        public void Draw(RenderTarget target, RenderStates states) => target.Draw(sprite, states);
     }
 }

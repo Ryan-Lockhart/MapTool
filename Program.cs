@@ -24,6 +24,12 @@ namespace MapTool
         private static Sprite cursor;
 
         private static Vector2f lastCursorPosition;
+        private static Color lastCursorColor;
+
+        private static FloodSelector floodSelector;
+
+        private static Province? selection;
+        private static bool canReselect;
 
 #pragma warning restore
 
@@ -58,6 +64,7 @@ namespace MapTool
             window.MouseWheelScrolled += Window_MouseWheelScrolled;
 
             provinces = new Map("Assets\\Maps\\provinces_map.png", MapType.Provinces);
+            floodSelector = new FloodSelector(provinces);
 
             cursorTexture = new Texture("Assets\\cursor.png");
             cursor = new Sprite(cursorTexture);
@@ -82,9 +89,19 @@ namespace MapTool
             Vector2i mousePosition = (Vector2i)window.MapPixelToCoords(Mouse.GetPosition(window), camera.View);
 
             lastCursorPosition = cursor.Position;
+            lastCursorColor = cursor.Color;
 
             cursor.Position = cursorPosition;
             cursor.Color = provinces.SamplePosition(mousePosition);
+
+            if (lastCursorColor != cursor.Color) canReselect = true;
+
+            if (canReselect && Mouse.IsButtonPressed(Mouse.Button.Left))
+            {
+                try { selection = new Province(floodSelector.SelectEdge((Vector2u)mousePosition)); }
+                catch (InvalidSelectionException err) { Console.WriteLine(err.Message); }
+                finally { canReselect = false; }
+            }
 
             if (Mouse.IsButtonPressed(Mouse.Button.Middle) && lastCursorPosition != cursor.Position)
                 camera.Translate(-(cursorPosition - lastCursorPosition), true);
@@ -111,6 +128,8 @@ namespace MapTool
             camera.Activate();
 
             window.Draw(provinces);
+
+            if (selection != null) window.Draw(selection);
 
             camera.Deactivate();
 

@@ -75,6 +75,9 @@
     <None Update="Assets\Maps\terrain_map.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Assets\Maps\test_map.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Assets\Maps\trade_goods_map.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
