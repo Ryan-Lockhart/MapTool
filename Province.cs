@@ -4,167 +4,261 @@ using System.Collections.Generic;
 
 using static MapTool.SFMLExtensions.Vector2fExtensions;
 using static MapTool.SFMLExtensions.Vector2uExtensions;
+using System.Data;
 
 namespace MapTool
 {
-    public struct Line
+    public enum Cardinal
     {
-        private Vector2u start;
-        private Vector2u end;
-
-        public Line(in Vector2u start, in Vector2u end)
-        {
-            this.start = start;
-            this.end = end;
-        }
-
-        public Line(uint x1, uint y1, uint x2, uint y2)
-        {
-            start = new Vector2u(x1, y1);
-            end = new Vector2u(x2, y2);
-        }
-
-        public Vector2u Start { get => start; set => start = value; }
-        public Vector2u End { get => end; set => end = value; }
-
-        private static bool OnSegment(in Vector2u p, in Vector2u q, in Vector2u r)
-        {
-            if (q.X <= Math.Max(p.X, r.X) && q.X >= Math.Min(p.X, r.X) &&
-                q.Y <= Math.Max(p.Y, r.Y) && q.Y >= Math.Min(p.Y, r.Y))
-                return true;
-
-            return false;
-        }
-
-        private static int Orientation(in Vector2u p, in Vector2u q, in Vector2u r)
-        {
-            int val = (int)((q.Y - p.X) * (r.X - q.X) - (q.X - p.X) * (r.Y - q.Y));
-
-            if (val == 0) return 0;
-
-            return (val > 0) ? 1 : 2;
-        }
-
-        public static bool Intersect(in Line a, in Line b)
-        {
-            int o1 = Orientation(a.Start, a.End, b.Start);
-            int o2 = Orientation(a.Start, a.End, b.End);
-            int o3 = Orientation(b.Start, b.End, a.Start);
-            int o4 = Orientation(b.Start, b.End, a.End);
-
-            if (o1 != o2 && o3 != o4) return true;
-
-            if (o1 == 0 && OnSegment(a.Start, b.Start, a.End)) return true;
-            if (o2 == 0 && OnSegment(a.Start, b.End, a.End)) return true;
-            if (o3 == 0 && OnSegment(b.Start, a.Start, b.End)) return true;
-            if (o4 == 0 && OnSegment(b.Start, a.End, b.End)) return true;
-
-            return false;
-        }
+        Northeast,
+        North,
+        Northwest,
+        East,
+        Central,
+        West,
+        Southeast,
+        South,
+        Southwest
     }
 
-    public class Province : Drawable
+	public class Province : Drawable
     {
-        private static readonly Vector2f nudge = new Vector2f(0.5f, 0.5f);
+		private readonly Vertex[] vertices;
 
-        private readonly Vertex[] vertices;
+		private readonly Vertex center;
 
-        private List<Vector2u> GenerateConcaveHull(HashSet<Vector2u> vertices, int neighbours)
+		private Vector2f DirectionToVector(Cardinal direction) => direction switch
+		{
+			Cardinal.Northwest => new Vector2f(0.0f, 0.0f),
+			Cardinal.North => new Vector2f(0.5f, 0.0f),
+			Cardinal.Northeast => new Vector2f(1.0f, 0.0f),
+			Cardinal.West => new Vector2f(0.0f, 0.5f),
+            Cardinal.Central => new Vector2f(0.5f, 0.5f),
+			Cardinal.East => new Vector2f(1.0f, 0.5f),
+			Cardinal.Southwest => new Vector2f(0.0f, 1.0f),
+			Cardinal.South => new Vector2f(0.5f, 1.0f),
+			Cardinal.Southeast => new Vector2f(1.0f, 1.0f),
+			_ => throw new ArgumentException("Invalid direction!")
+		};
+
+		private void AddCase(Vector2f origin, byte config, List<Vector2f> vertices)
+		{
+			switch (config)
+			{
+				case 0: return;
+				case 1:
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					vertices.Add(origin + DirectionToVector(Cardinal.Southwest));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+					return;
+				case 2:
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+					vertices.Add(origin + DirectionToVector(Cardinal.Southeast));
+					return;
+				case 3:
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					AddCase(origin, 1, vertices);
+					AddCase(origin, 2, vertices);
+					return;
+				case 4:
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.Northeast));
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					return;
+				case 5:
+					AddCase(origin, 4, vertices);
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					AddCase(origin, 1, vertices);
+					return;
+				case 6:
+					AddCase(origin, 4, vertices);
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					AddCase(origin, 2, vertices);
+					return;
+				case 7:
+					AddCase(origin, 4, vertices);
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					AddCase(origin, 1, vertices);
+					AddCase(origin, 2, vertices);
+					return;
+				case 8:
+					vertices.Add(origin + DirectionToVector(Cardinal.Northwest));
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					return;
+				case 9:
+					AddCase(origin, 8, vertices);
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					AddCase(origin, 1, vertices);
+					return;
+				case 10:
+					AddCase(origin, 8, vertices);
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					AddCase(origin, 2, vertices);
+					return;
+				case 11:
+					AddCase(origin, 8, vertices);
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					AddCase(origin, 1, vertices);
+					AddCase(origin, 2, vertices);
+					return;
+				case 12:
+					AddCase(origin, 8, vertices);
+					AddCase(origin, 4, vertices);
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					return;
+				case 13:
+					AddCase(origin, 8, vertices);
+					AddCase(origin, 4, vertices);
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					AddCase(origin, 1, vertices);
+					return;
+				case 14:
+					AddCase(origin, 8, vertices);
+					AddCase(origin, 4, vertices);
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					AddCase(origin, 2, vertices);
+					return;
+				case 15:
+					AddCase(origin, 8, vertices);
+					AddCase(origin, 4, vertices);
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.West));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					vertices.Add(origin + DirectionToVector(Cardinal.North));
+					vertices.Add(origin + DirectionToVector(Cardinal.East));
+					vertices.Add(origin + DirectionToVector(Cardinal.South));
+
+					AddCase(origin, 1, vertices);
+					AddCase(origin, 2, vertices);
+					return;
+			}
+		}
+
+		private (Vector2u max_extent, Vector2u min_extent) FindExtents(IEnumerable<Vector2u> vertices)
+			=> (new Vector2u(vertices.Min(x => x.X), vertices.Min(x => x.Y)), new Vector2u(vertices.Max(x => x.X), vertices.Max(x => x.Y)));
+
+		private List<Vector2f> GenerateConcaveHull(List<Vector2u> dataset)
         {
-            neighbours = Math.Max(neighbours, 3);
+			(var min_extent, var max_extent) = FindExtents(dataset);
 
-            List<Vector2u> dataset = [.. vertices];
+			var size = max_extent - min_extent;
 
-            if (dataset.Count < 3) throw new ArgumentException($"[{DateTime.Now}] ERROR: Insufficient vertices to construct polygon!");
+			size.X++;
+			size.Y++;
 
-            if (dataset.Count == 3) return dataset;
+			var grid = new bool[size.X + 2, size.Y + 2];
 
-            neighbours = Math.Min(neighbours, dataset.Count);
+			for (uint j = 0; j < size.Y + 2; j++)
+            {
+				if (j > 0 || j < size.Y)
+					for (uint i = 0; i < size.X + 2; i++)
+						grid[i, j] = i > 0 || i < size.Y ? dataset.Contains(min_extent + new Vector2u(i - 1, j - 1)) : true;
+				else for (uint i = 0; i < size.X + 2; i++) grid[i, j] = true;
+			}
 
-            float minY = dataset.Min(vertex => vertex.Y);
-            List<Vector2u> lowestValues = dataset.Where(vertex => vertex.Y == minY).ToList();
+            List<Vector2f> vertices = new List<Vector2f>();
 
-            float min = lowestValues.Min(vertex => MathF.Abs(vertex.X * vertex.X + vertex.Y * vertex.Y));
-            var first = lowestValues.Where(vertex => MathF.Abs(vertex.X * vertex.X + vertex.Y * vertex.Y) == min).First();
+			for (uint j = 0; j < size.Y + 1; j++)
+            {
+				for (uint i = 0; i < size.X + 1; i++)
+				{
+					byte config = 0;
 
-            var hull = new List<Vector2u> { first };
+					if (grid[i, j]) config += 8;
+					if (grid[i + 1, j]) config += 4;
+					if (grid[i + 1, j + 1]) config += 2;
+					if (grid[i, j + 1]) config += 1;
 
-            var current = first;
-            dataset.Remove(first);
+                    var position = new Vector2f(i + min_extent.X - 0.5f, j + min_extent.Y - 0.5f);
 
-            while (dataset.Count > 0)
-	        {
-                Vector2u[] nearest = dataset
-                    .OrderBy(v => (v - current).SqrMagnitude())
-                    .Take(neighbours)
-                    .OrderBy(v => (v - current).Angle())
-                    .ToArray();
+					AddCase(position, config, vertices);
+				}
+			}
 
-                if (hull.Count == 1)
-                {
-                    current = nearest.First();
+            return vertices;
+		}
 
-                    goto pass;
-                }
+        public Province(in Color color, in Vector2u mapSize, in Vector2u textureSize, List<Vector2u> points)
+        {
+            var hull = GenerateConcaveHull(points);
 
-                for (int i = 0; i < nearest.Length; i++)
-                {
-                    bool intersection = false;
+			vertices = new Vertex[hull.Count];
+			center = new Vertex(Average(points));
 
-                    for (int j = hull.Count - 1; j > 0; j--)
-                    {
-                        intersection = Line.Intersect(new Line(current, nearest[i]), new Line(hull[j], hull[j - 1]));
+			Vector2f ratio = new Vector2f((float)textureSize.X / mapSize.X, (float)textureSize.Y / mapSize.Y);
 
-                        if (intersection)
-                            break;
-                    }
-
-                    if (intersection)
-                        continue;
-
-                    current = nearest[i];
-
-                    goto pass;
-                }
-
-                return GenerateConcaveHull(vertices, ++neighbours);
-
-                pass:
-
-                dataset.Remove(current);
-                hull.Add(current);
-
-                continue;
-            }
-
-            if (dataset.Count > 0) return GenerateConcaveHull(vertices, ++neighbours);
-
-            return hull;
+			for (int i = 0; i < hull.Count; i++)
+                vertices[i] = new Vertex(hull[i], color, new Vector2f(hull[i].X * ratio.X, hull[i].Y * ratio.Y));
         }
 
+        public Vertex Center => center;
 
-        public Province(HashSet<Vector2u> edge)
-        {
-            var center = Average(edge);
-
-            var hull = GenerateConcaveHull([.. edge], 2048);
-
-            vertices = new Vertex[hull.Count + 1];
-            vertices[0] = new Vertex(center);
-
-            for (int i = 0; i < hull.Count; i++)
-                vertices[i + 1] = new Vertex((Vector2f)hull[i] + nudge);
-        }
-
-        public Vertex Center => vertices[0];
-
-        public Vertex[] Edge => vertices.Take(new Range(1, vertices.Length)).ToArray();
-
-        public void Draw(RenderTarget target, RenderStates states)
-        {
-            //target.Draw(vertices, 1, (uint)(vertices.Length - 1), PrimitiveType.LineStrip, states);
-            target.Draw(vertices, PrimitiveType.LineStrip, states);
-            //target.Draw(vertices, PrimitiveType.TriangleFan, states);
-        }
-    }
+		public void Draw(RenderTarget target, RenderStates states) => target.Draw(vertices, PrimitiveType.Triangles, states);
+	}
 }

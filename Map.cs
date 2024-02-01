@@ -13,6 +13,8 @@ namespace MapTool
 
         private readonly MapType type;
 
+        private readonly int checksum;
+
         private Sprite sprite;
 
         public Map(string path, MapType type)
@@ -21,14 +23,26 @@ namespace MapTool
             image = texture.CopyToImage();
 
             this.type = type;
+            checksum = CalculateChecksum();
 
             sprite = new Sprite(texture);
         }
 
         public MapType MapType => type;
+        public int Checksum => checksum;
 
         public Vector2u Size => image.Size;
-        public byte[] Pixels => image.Pixels;
+
+        private int CalculateChecksum()
+        {
+            int hash = 0;
+
+            for (uint j = 0; j < image.Size.Y; j++)
+				for (uint i = 0; i < image.Size.X; i++)
+					hash = HashCode.Combine(hash, image.GetPixel(i, j).GetHashCode());
+
+			return hash;
+		}
 
         public Color SamplePosition(uint x, uint y)
         {
@@ -84,8 +98,8 @@ namespace MapTool
 
             Vector2u destination = origin + new Vector2u(width, height);
 
-            for (uint y = destination.Y; y < destination.Y; y++)
-                for (uint x = destination.X; x < destination.X; x++)
+            for (uint y = origin.Y; y < destination.Y; y++)
+                for (uint x = origin.X; x < destination.X; x++)
                     sampleRegion[x, y] = image.GetPixel(x, y);
         }
 
@@ -97,8 +111,8 @@ namespace MapTool
 
             Vector2u destination = new Vector2u(originX, originY) + size;
 
-            for (uint y = destination.Y; y < destination.Y; y++)
-                for (uint x = destination.X; x < destination.X; x++)
+            for (uint y = originY; y < destination.Y; y++)
+                for (uint x = originX; x < destination.X; x++)
                     sampleRegion[x, y] = image.GetPixel(x, y);
         }
 
@@ -110,11 +124,11 @@ namespace MapTool
 
             Vector2u destination = origin + size;
 
-            for (uint y = destination.Y; y < destination.Y; y++)
-                for (uint x = destination.X; x < destination.X; x++)
+            for (uint y = origin.Y; y < destination.Y; y++)
+                for (uint x = origin.X; x < destination.X; x++)
                     sampleRegion[x, y] = image.GetPixel(x, y);
         }
 
-        public void Draw(RenderTarget target, RenderStates states) => target.Draw(sprite, states);
-    }
+		public void Draw(RenderTarget target, RenderStates states) => target.Draw(sprite, states);
+	}
 }
