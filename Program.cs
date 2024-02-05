@@ -17,6 +17,8 @@ namespace MapTool
 
         private static RenderWindow window;
 
+        private static Font font;
+
         private static Map map;
         private static Dictionary<Color, Province> provinces;
 
@@ -64,6 +66,8 @@ namespace MapTool
             window.SetMouseCursorVisible(false);
 
             window.MouseWheelScrolled += Window_MouseWheelScrolled;
+
+            font = new Font("Assets\\Fonts\\consola.ttf");
 
 			terrain = new Texture("Assets\\Maps\\Graphical\\world_terrain.png");
 
@@ -131,7 +135,10 @@ namespace MapTool
 
             camera.Activate();
 
-			if (selection != null) window.Draw(selection);
+            foreach (var province in provinces.Values)
+                if (province != null) window.Draw(province);
+
+            if (selection != null) selection.DrawDebug(window);
 
             camera.Deactivate();
 

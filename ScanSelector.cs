@@ -14,11 +14,11 @@ namespace MapTool
         {
             var selection = new HashSet<Vector2u>();
 
-            for (uint y = 0; y < map.Size.Y; y++)
+            for (uint j = 0; j < map.Size.Y; j++)
             {
-                for (uint x = 0; x < map.Size.X; x++)
+                for (uint i = 0; i < map.Size.X; i++)
                 {
-                    Vector2u currentPosition = new Vector2u(x, y);
+                    Vector2u currentPosition = new Vector2u(i, j);
                     Color currentColor = map.SamplePosition(currentPosition);
 
 					if (currentColor != color) continue;
@@ -27,6 +27,6 @@ namespace MapTool
             }
 
             return selection;
-        }        
+        }
     }
 }

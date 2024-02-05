@@ -13,8 +13,6 @@ namespace MapTool
 
         private readonly MapType type;
 
-        private readonly int checksum;
-
         private Sprite sprite;
 
         public Map(string path, MapType type)
@@ -23,13 +21,11 @@ namespace MapTool
             image = texture.CopyToImage();
 
             this.type = type;
-            checksum = CalculateChecksum();
 
             sprite = new Sprite(texture);
         }
 
         public MapType MapType => type;
-        public int Checksum => checksum;
 
         public Vector2u Size => image.Size;
 

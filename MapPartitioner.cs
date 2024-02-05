@@ -12,13 +12,13 @@ namespace MapTool
 	{
 		public static Dictionary<Color, Province> Partition(Map map, Vector2u textureSize)
 		{
-			Dictionary<Color, List<Vector2u>> provinceFills = new Dictionary<Color, List<Vector2u>>();
+			Dictionary<Color, HashSet<Vector2u>> provinceFills = new Dictionary<Color, HashSet<Vector2u>>();
 
 			map.SampleRegion(new Vector2u(0, 0), map.Size, out Color[,] colors);
 
 			foreach (var color in colors)
 				if (!provinceFills.ContainsKey(color))
-					provinceFills.Add(color, new List<Vector2u>());
+					provinceFills.Add(color, new HashSet<Vector2u>());
 
 			for (uint j = 0; j < map.Size.Y; j++)
 				for (uint i = 0; i < map.Size.X; i++)
@@ -26,12 +26,15 @@ namespace MapTool
 
 			var provinces = new Dictionary<Color, Province>();
 
-			Parallel.ForEach(provinceFills, fill =>
-			{
-				provinces.Add(fill.Key, new Province(fill.Key, map.Size, textureSize, fill.Value));
-			});
+			foreach (var fill in provinceFills)
+                provinces.Add(fill.Key, new Province(fill.Key, fill.Value));
 
-			return provinces;
+            /*Parallel.ForEach(provinceFills, fill =>
+			{
+				provinces.Add(fill.Key, new Province(fill.Key, fill.Value));
+			});*/
+
+            return provinces;
 		}
 	}
 }
